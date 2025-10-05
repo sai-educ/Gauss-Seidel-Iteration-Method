@@ -2,610 +2,889 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gauss-Seidel Method — 3D Visualization</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Gauss-Seidel Iteration Method — Interactive Lab</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  
-  body {
-    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-    background: linear-gradient(135deg, #0a1628 0%, #1a3a5f 100%);
-    color: #e8f4ff;
-    overflow: hidden;
-    height: 100vh;
+  :root{
+    --bg:#0a1628; --panel:#0f1e3d; --ink:#e8f4ff; --muted:#b3d9ff;
+    --accent:#3b82f6; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+    --grid:#1a2847; --converge:#10b981; --diverge:#ef4444; --iterate:#3b82f6;
+    --overlay:#00000090;
   }
   
-  #container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
+  * { box-sizing: border-box; }
+  
+  html,body{height:100%; margin:0; padding:0; overflow-x:hidden;}
+  body{
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,"Noto Sans";
+    color:var(--ink); 
+    background: radial-gradient(1200px 700px at 15% -10%, #1a3a5f 0%, #0a1628 60%) fixed;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .howto-anchor{position:fixed; top:10px; right:10px; z-index:1001}
+  .howto-btn{
+    background:#1a3a5f; border:1px solid #2e5a8f; color:var(--ink);
+    border-radius:999px; padding:10px 16px; font-size:14px; cursor:pointer;
+    min-height:44px; display:flex; align-items:center; gap:6px;
+    touch-action: manipulation;
+  }
+  .howto-btn:active{transform:scale(0.97)}
+  .howto-btn:hover{border-color:#4e7aaf}
+  .backdrop{position:fixed; inset:0; background:var(--overlay); display:none; z-index:1000}
+  .backdrop.open{display:block}
+  .howto-panel{
+    position:fixed; top:0; right:0; bottom:0; width:min(440px, 100vw);
+    background:linear-gradient(180deg,#0f1e3d 0%,#0a1628 100%);
+    border-left:1px solid #1a3a5f; 
+    box-shadow:0 0 40px #00000070; z-index:1002; display:none;
+    overflow-y:auto; -webkit-overflow-scrolling: touch;
+  }
+  .howto-panel.open{display:block; animation:slideIn 0.3s ease}
+  @keyframes slideIn{from{transform:translateX(100%)} to{transform:translateX(0)}}
+  .howto-inner{padding:16px}
+  .howto-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; position:sticky; top:0; background:#0f1e3d; padding:12px; margin:-16px -16px 12px; z-index:10; border-bottom:1px solid #1a3a5f}
+  .howto-title{font-size:16px; font-weight:700}
+  .close-btn{background:#0a1628; border:1px solid #1a3a5f; color:var(--ink); border-radius:10px; padding:10px 12px; cursor:pointer; min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center; touch-action:manipulation}
+  .close-btn:active{transform:scale(0.95)}
+  .close-btn:hover{border-color:#2e5a8f}
+  .howto-section{border:1px solid #1a3a5f; background:#0d1a35; border-radius:10px; padding:14px; margin-top:10px}
+  .howto-section h3{margin:0 0 10px; font-size:15px; color:#3b82f6}
+  .howto-section ol{margin:.5em 0 .4em 1.4em; line-height:1.7; padding-left:0} 
+  .howto-section li{margin:.4em 0}
+  .howto-section ul{margin:.5em 0 .4em 1.4em; line-height:1.7; padding-left:0}
+  .muted{color:var(--muted)}
+  .highlight{color:#60a5fa; font-weight:600}
+
+  header{max-width:1400px; margin:0 auto; padding:20px 16px 12px}
+  h1{margin:0 0 8px; font-size:clamp(20px,5vw,34px); line-height:1.2}
+  .sub{color:var(--muted); max-width:1100px; line-height:1.6; font-size:clamp(13px,3.5vw,15px)}
+  
+  main{
+    max-width:1400px; margin:12px auto 40px; padding:0 12px; 
+    display:grid; gap:14px; grid-template-columns:1fr;
+  }
+  @media (min-width:900px){ 
+    main{grid-template-columns:1.2fr 1fr; padding:0 16px; gap:16px} 
+  }
+
+  .card{
+    background:linear-gradient(180deg,#0f1e3d 0%,#0a1628 100%); 
+    border:1px solid #1a3a5f; border-radius:14px; padding:14px; 
+    box-shadow:0 10px 28px #00000045, inset 0 1px 0 #2a4a6f33
+  }
+  h2{margin:0 0 12px; font-size:clamp(16px,4vw,18px)}
+  .row{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+  .spacer{height:10px}
+  .tag{
+    display:inline-flex; align-items:center; gap:6px; 
+    font-size:11px; padding:6px 10px; border-radius:999px; 
+    border:1px dashed #1a3a5f; background:#0d1a35;
+    white-space:nowrap;
+  }
+  .dot{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .dot.converge{background:var(--converge)} 
+  .dot.diverge{background:var(--diverge)} 
+  .dot.iterate{background:var(--iterate)}
+
+  button, select, input[type="number"], input[type="text"]{
+    background:#1a3a5f; border:1px solid #2e5a8f; color:var(--ink); 
+    border-radius:10px; padding:11px 14px; font-size:14px; outline:none;
+    min-height:44px; touch-action:manipulation;
+  }
+  button{cursor:pointer; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:6px}
+  button:active{transform:scale(0.97)}
+  button:hover{border-color:#4e7aaf}
+  button.primary{background:linear-gradient(180deg,#3b82f6,#2563eb); border-color:#60a5fa; font-weight:600}
+  button.ghost{background:#0f1e3d}
+  button.ok{background:#065f46; border-color:#10b981; font-weight:600}
+  button.warn{background:#78350f; border-color:#f59e0b}
+  
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; 
+    padding:8px 12px; border:1px solid #1a3a5f; 
+    border-radius:999px; background:#0d1a35; color:var(--muted);
+    font-size:13px; flex-wrap:wrap;
+  }
+  .pill input, .pill select{
+    padding:8px 10px; min-height:38px; font-size:13px;
+  }
+
+  .matrix-wrap{
+    position:relative; padding:12px; border-radius:12px;
+    background: linear-gradient(180deg, rgba(59,130,246,.03), rgba(59,130,246,0));
+    border:1px solid #2a4a7f; overflow-x:auto; overflow-y:visible;
+    -webkit-overflow-scrolling: touch;
   }
   
-  #canvas-container {
-    width: 100%;
-    height: 100%;
+  .matrix-container{
+    display:flex; gap:12px; align-items:center; min-width:min-content;
   }
   
-  #controls {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: rgba(10, 22, 40, 0.9);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    max-width: 350px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  .matrix{
+    display:grid; 
+    gap:6px;
+    grid-template-columns:repeat(var(--cols), 80px);
+    min-width:min-content;
   }
   
-  h1 {
-    font-size: 20px;
-    margin-bottom: 12px;
-    color: #3b82f6;
-    font-weight: 700;
+  .cell{position:relative}
+  .cell input{
+    width:100%; height:70px; 
+    padding:8px; text-align:center; 
+    font-size:15px; 
+    font-weight:600; color:var(--ink);
+    background:#0d1f3d; border:2px solid #1a3a5f; 
+    border-radius:10px; 
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .cell input:focus{
+    border-color:#3b82f6; 
+    box-shadow:0 0 0 3px #3b82f633;
+    outline:none;
+  }
+  .cell input.diagonal{
+    background:#0d2a1f; border-color:#10b981; box-shadow:0 0 8px #10b98133;
+  }
+  .cell input.solution{
+    background:#1a2847; border-color:#60a5fa;
   }
   
-  .section {
-    margin: 15px 0;
+  .vector-label{
+    font-size:20px; font-weight:700; color:#3b82f6; align-self:center;
   }
-  
-  .section-title {
-    font-size: 13px;
-    color: #60a5fa;
-    margin-bottom: 8px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+
+  .iteration-display{
+    background:#0d1a35; border:1px solid #1a3a5f; border-radius:12px; 
+    padding:12px; margin-top:10px;
+    font-family:ui-monospace,Menlo,Consolas,monospace; 
+    font-size:13px; line-height:2;
   }
-  
-  .input-group {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin: 8px 0;
+  .iteration-display .var{color:#3b82f6; font-weight:600}
+  .iteration-display .value{color:#10b981; font-weight:600}
+  .iteration-display .error{color:#f59e0b; font-weight:600}
+
+  .convergence-chart{
+    background:#0d1a35; border:1px solid #1a3a5f; border-radius:12px; 
+    padding:12px; height:200px; position:relative;
+    overflow:hidden;
   }
-  
-  input {
-    background: rgba(26, 58, 95, 0.6);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: #e8f4ff;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 13px;
-    text-align: center;
-    outline: none;
-    transition: border-color 0.2s;
+  .chart-canvas{
+    width:100%; height:100%;
   }
-  
-  input:focus {
-    border-color: #3b82f6;
+
+  .log{
+    background:#0d1a35; border:1px solid #1a3a5f; border-radius:12px; 
+    padding:12px; height:200px; overflow:auto; 
+    font-family:ui-monospace,Menlo,Consolas,monospace; 
+    font-size:12px; line-height:1.7;
+    -webkit-overflow-scrolling: touch;
   }
+  .log-step{color:#3b82f6; font-weight:600}
   
-  button {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    border: none;
-    color: white;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 4px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  .kpis{
+    display:grid; grid-template-columns:repeat(3,1fr); 
+    gap:8px; margin-top:10px;
   }
-  
-  button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  .kpi{
+    background:#0d1a35; border:1px solid #1a3a5f; 
+    border-radius:10px; padding:12px; text-align:center;
   }
-  
-  button:active {
-    transform: translateY(0);
+  .kpi .label{font-size:11px; color:var(--muted); margin-bottom:6px} 
+  .kpi .value{font-size:clamp(16px,4.5vw,20px); font-weight:700; color:#3b82f6}
+  .kpi .value.converged{color:#10b981}
+  .kpi .value.diverged{color:#ef4444}
+
+  details{
+    border:1px solid #1a3a5f; background:#0d1a35; 
+    border-radius:10px; padding:12px; margin-top:12px;
   }
-  
-  button.secondary {
-    background: linear-gradient(135deg, #1e3a5f, #0f2544);
+  summary{
+    cursor:pointer; font-weight:600; font-size:14px; 
+    min-height:44px; display:flex; align-items:center;
+    touch-action:manipulation; user-select:none;
   }
-  
-  button.success {
-    background: linear-gradient(135deg, #10b981, #059669);
+  details[open] summary{margin-bottom:12px}
+
+  footer{
+    max-width:1400px; margin:8px auto 40px; padding:0 16px; 
+    color:var(--muted); font-size:12px; line-height:1.6;
   }
-  
-  .button-group {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .info-box{
+    background:#0d2a3f; border:1px solid #1a4a7f; 
+    border-radius:10px; padding:12px; margin:10px 0; 
+    border-left:3px solid #3b82f6; font-size:13px; line-height:1.6;
   }
-  
-  #status {
-    background: rgba(26, 58, 95, 0.4);
-    border-left: 3px solid #3b82f6;
-    padding: 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.6;
-    margin-top: 12px;
+  .info-box strong{color:#3b82f6}
+
+  .formula-box{
+    background:#0d1a35; border:1px solid #1a3a5f; 
+    border-radius:10px; padding:12px; margin:10px 0;
+    font-family:ui-monospace,Menlo,Consolas,monospace; 
+    font-size:14px; line-height:2; text-align:center;
   }
-  
-  .status-value {
-    color: #10b981;
-    font-weight: 600;
-  }
-  
-  #info {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    background: rgba(10, 22, 40, 0.9);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 12px;
-    padding: 15px;
-    max-width: 350px;
-    backdrop-filter: blur(10px);
-    font-size: 12px;
-    line-height: 1.6;
-  }
-  
-  .legend {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 6px 0;
-  }
-  
-  .legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-  
-  .loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    font-size: 18px;
-    color: #3b82f6;
-  }
-  
-  @media (max-width: 768px) {
-    #controls, #info {
-      max-width: calc(100vw - 40px);
-    }
+
+  @media (max-width:767px){
+    .row{gap:6px}
+    .pill{font-size:12px; padding:7px 10px}
+    button{font-size:13px; padding:10px 12px}
+    .tag{font-size:10px; padding:5px 8px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
   }
 </style>
 </head>
 <body>
-  <div id="container">
-    <div id="canvas-container"></div>
-    
-    <div id="controls">
-      <h1>🌐 Gauss-Seidel 3D</h1>
-      
-      <div class="section">
-        <div class="section-title">System: Ax = b (3×3)</div>
-        <div style="font-size:11px; color:#b3d9ff; margin-bottom:8px">Row 1:</div>
-        <div class="input-group">
-          <input id="a11" type="number" value="10" step="0.5">
-          <input id="a12" type="number" value="1" step="0.5">
-          <input id="a13" type="number" value="1" step="0.5">
-        </div>
-        <div style="font-size:11px; color:#b3d9ff; margin:6px 0 8px 0">Row 2:</div>
-        <div class="input-group">
-          <input id="a21" type="number" value="1" step="0.5">
-          <input id="a22" type="number" value="10" step="0.5">
-          <input id="a23" type="number" value="1" step="0.5">
-        </div>
-        <div style="font-size:11px; color:#b3d9ff; margin:6px 0 8px 0">Row 3:</div>
-        <div class="input-group">
-          <input id="a31" type="number" value="1" step="0.5">
-          <input id="a32" type="number" value="1" step="0.5">
-          <input id="a33" type="number" value="10" step="0.5">
-        </div>
+  <div class="howto-anchor">
+    <button id="howBtn" class="howto-btn">
+      <span>❓</span>
+      <span>How to Use</span>
+    </button>
+  </div>
+  <div id="howBackdrop" class="backdrop"></div>
+  <div id="howPanel" class="howto-panel">
+    <div class="howto-inner">
+      <div class="howto-head">
+        <div class="howto-title">How to Use — Gauss-Seidel Method</div>
+        <button id="howClose" class="close-btn">✕</button>
+      </div>
+
+      <section class="howto-section">
+        <h3>🎯 Learning Objectives</h3>
+        <ul class="muted">
+          <li>Understand <span class="highlight">iterative solution methods</span> for linear systems</li>
+          <li>Master the <span class="highlight">Gauss-Seidel algorithm</span> and its convergence properties</li>
+          <li>Learn <span class="highlight">diagonal dominance</span> and convergence criteria</li>
+          <li>Visualize <span class="highlight">convergence behavior</span> through iterations</li>
+          <li>Compare with Jacobi method and understand improvements</li>
+          <li>Apply to real engineering problems</li>
+        </ul>
         
-        <div style="font-size:11px; color:#b3d9ff; margin:12px 0 8px 0">Constants b:</div>
-        <div class="input-group">
-          <input id="b1" type="number" value="12" step="0.5">
-          <input id="b2" type="number" value="12" step="0.5">
-          <input id="b3" type="number" value="12" step="0.5">
+        <h3>📋 Procedure</h3>
+        <ol>
+          <li><strong>System Setup:</strong> Enter coefficient matrix A and constants vector b (2×2 to 5×5)</li>
+          <li><strong>Initial Guess:</strong> Provide starting values (default is zero vector)</li>
+          <li><strong>Iteration:</strong> Click <strong>Next Iteration</strong> to:
+            <ul style="margin-left:1.2em; margin-top:0.3em">
+              <li>Update each variable using latest values</li>
+              <li>Calculate error at each step</li>
+              <li>Check convergence criteria</li>
+            </ul>
+          </li>
+          <li><strong>Convergence:</strong> Watch error decrease until tolerance is met</li>
+          <li><strong>Analysis:</strong> View convergence chart and iteration history</li>
+        </ol>
+
+        <div class="info-box">
+          <strong>💡 Key Concept:</strong> Gauss-Seidel uses updated values immediately, making it faster than Jacobi! System must be diagonally dominant for guaranteed convergence.
         </div>
-      </div>
-      
-      <div class="section">
-        <div class="button-group">
-          <button onclick="startIteration()">▶ Start</button>
-          <button onclick="resetView()" class="secondary">Reset</button>
-          <button onclick="loadPreset()" class="secondary">Preset</button>
+
+        <h3>📐 The Formula</h3>
+        <div class="formula-box">
+          x<sub>i</sub><sup>(k+1)</sup> = (b<sub>i</sub> - Σ a<sub>ij</sub>x<sub>j</sub><sup>(k+1)</sup> - Σ a<sub>ij</sub>x<sub>j</sub><sup>(k)</sup>) / a<sub>ii</sub>
         </div>
-      </div>
-      
-      <div id="status">
-        <div><strong>Iteration:</strong> <span class="status-value" id="iter">0</span></div>
-        <div><strong>Error:</strong> <span class="status-value" id="error">–</span></div>
-        <div style="margin-top:8px; font-size:11px; color:#b3d9ff">
-          Solution: <span id="solution">[0, 0, 0]</span>
-        </div>
-      </div>
-    </div>
-    
-    <div id="info">
-      <div style="font-weight:600; margin-bottom:8px; color:#3b82f6">Legend</div>
-      <div class="legend">
-        <div class="legend-dot" style="background:#3b82f6"></div>
-        <div>Iteration Path (blue spheres)</div>
-      </div>
-      <div class="legend">
-        <div class="legend-dot" style="background:#10b981"></div>
-        <div>True Solution (green)</div>
-      </div>
-      <div class="legend">
-        <div class="legend-dot" style="background:#f59e0b"></div>
-        <div>Current Position (orange)</div>
-      </div>
-      <div style="margin-top:10px; font-size:11px; color:#b3d9ff">
-        <strong>Controls:</strong> Drag to rotate • Scroll to zoom • Right-drag to pan
-      </div>
+        <p class="muted" style="font-size:12px">Uses new values (k+1) for j&lt;i, old values (k) for j&gt;i</p>
+      </section>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>
-    let scene, camera, renderer, controls;
-    let iterationPoints = [];
-    let currentSphere, trueSolutionSphere;
-    let pathLine;
-    let animationId;
-    
-    // Initialize Three.js scene
-    function init() {
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0a1628);
-      scene.fog = new THREE.Fog(0x0a1628, 10, 50);
+<header>
+  <h1>Gauss-Seidel Iteration Method — Interactive Lab</h1>
+  <p class="sub">
+    <strong>Objective:</strong> Solve <strong>linear systems Ax = b</strong> using the <strong>Gauss-Seidel iterative method</strong>. 
+    Watch the solution converge step-by-step! This method uses the most recently computed values, making it more efficient than Jacobi iteration. 
+    Perfect for large sparse systems and understanding iterative convergence.
+  </p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="row">
+      <div class="pill">
+        <span>Size (n×n):</span>
+        <input id="size" type="number" min="2" max="5" value="3" style="width:55px">
+      </div>
+      <button id="resize">Resize</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row">
+      <button id="presetA" class="ghost">Preset A (Diagonally Dominant)</button>
+      <button id="presetB" class="ghost">Preset B (Test Case)</button>
+      <button id="random" class="ghost">Random</button>
+      <button id="reset" class="ghost">Clear</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2 style="font-size:14px; color:#3b82f6">Coefficient Matrix A</h2>
+    <div class="matrix-wrap">
+      <div id="matrixA" class="matrix"></div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2 style="font-size:14px; color:#3b82f6">Constants Vector b</h2>
+    <div class="matrix-wrap">
+      <div id="vectorB" class="matrix" style="grid-template-columns:80px"></div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <details>
+      <summary>Initial Guess x<sup>(0)</sup></summary>
+      <div class="spacer"></div>
+      <div class="matrix-wrap">
+        <div id="vectorX0" class="matrix" style="grid-template-columns:80px"></div>
+      </div>
+    </details>
+
+    <div class="spacer"></div>
+
+    <div class="row" style="font-size:11px">
+      <span class="tag"><span class="dot converge"></span> Converged</span>
+      <span class="tag"><span class="dot iterate"></span> Iterating</span>
+      <span class="tag"><span class="dot diverge"></span> Diverging</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row">
+      <div class="pill">
+        <span>Tolerance:</span>
+        <input id="tolerance" type="text" value="0.0001" style="width:80px">
+      </div>
+      <div class="pill">
+        <span>Max Iterations:</span>
+        <input id="maxIter" type="number" value="50" style="width:60px">
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row">
+      <button id="iterate" class="primary">Next Iteration ▷</button>
+      <button id="run" class="ok">Run to Convergence</button>
+      <button id="stop" class="warn" style="display:none">Stop</button>
+      <button id="clear" class="ghost">Reset Iterations</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2>Current Solution</h2>
+    <div class="iteration-display" id="currentSolution">
+      <div class="muted">Start iterations to see solution...</div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h2>📚 Method Overview</h2>
+    <div class="muted" style="line-height:1.6; font-size:13px">
+      <p><strong>Gauss-Seidel Method:</strong><br>
+      An iterative technique that solves Ax = b by repeatedly updating each variable using the equation:</p>
       
-      // Camera
-      camera = new THREE.PerspectiveCamera(
-        60,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(8, 8, 8);
-      camera.lookAt(0, 0, 0);
+      <div class="formula-box" style="margin:8px 0; font-size:12px">
+        x<sub>i</sub> = (b<sub>i</sub> - Σ a<sub>ij</sub>x<sub>j</sub>) / a<sub>ii</sub>
+      </div>
       
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      document.getElementById('canvas-container').appendChild(renderer.domElement);
+      <p><strong>Key Features:</strong></p>
+      <ul style="margin:.3em 0 .3em 1.2em">
+        <li><strong>Uses latest values:</strong> Updates x<sub>i</sub> immediately</li>
+        <li><strong>Faster convergence:</strong> Than Jacobi method</li>
+        <li><strong>Diagonal dominance:</strong> |a<sub>ii</sub>| > Σ|a<sub>ij</sub>| ensures convergence</li>
+      </ul>
       
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-      
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 10);
-      scene.add(directionalLight);
-      
-      const pointLight = new THREE.PointLight(0x3b82f6, 0.5);
-      pointLight.position.set(-5, 5, -5);
-      scene.add(pointLight);
-      
-      // Add coordinate axes
-      const axesHelper = new THREE.AxesHelper(5);
-      scene.add(axesHelper);
-      
-      // Add grid
-      const gridHelper = new THREE.GridHelper(10, 10, 0x1a3a5f, 0x0f2544);
-      scene.add(gridHelper);
-      
-      // Add axis labels
-      addAxisLabels();
-      
-      // Simple orbit controls (manual implementation)
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-      
-      renderer.domElement.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
+      <div class="info-box" style="margin-top:12px">
+        <strong>Applications:</strong> Circuit analysis, heat transfer, fluid dynamics, finite element analysis, and any large sparse system!
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2>📝 Iteration Status</h2>
+    <div id="narr" class="muted" style="min-height:60px; padding:12px; background:#0d1a35; border-radius:10px; line-height:1.6; font-size:13px">
+      Set up your system and click <strong>Next Iteration</strong> to begin solving.
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Iteration</div>
+        <div id="iterCount" class="value">0</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Error</div>
+        <div id="errorVal" class="value">–</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Status</div>
+        <div id="status" class="value">Ready</div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2>📈 Convergence Chart</h2>
+    <div class="convergence-chart">
+      <canvas id="chartCanvas" class="chart-canvas"></canvas>
+    </div>
+
+    <div class="spacer"></div>
+
+    <h2>📋 Iteration Log</h2>
+    <div id="log" class="log"><div class="muted">Iterations will appear here...</div></div>
+
+    <details style="margin-top:14px">
+      <summary>🤔 Practice Questions</summary>
+      <ul style="margin:.6em 0 0 1.3em; line-height:1.7; font-size:13px">
+        <li>What happens if diagonal elements are small?</li>
+        <li>Why does Gauss-Seidel converge faster than Jacobi?</li>
+        <li>How does diagonal dominance ensure convergence?</li>
+        <li>When would you use direct vs. iterative methods?</li>
+      </ul>
+    </details>
+  </aside>
+</main>
+
+<footer>
+  <strong>Engineering Mathematics • Gauss-Seidel Iteration Laboratory</strong><br>
+  Iterative methods • Convergence analysis • Numerical linear algebra
+</footer>
+
+<script>
+let N = 3;
+let inputsA = [], inputsB = [], inputsX0 = [];
+let iterationData = [];
+let currentX = [];
+let isRunning = false;
+let logEl, narrEl;
+
+function openHowto(){
+  document.getElementById('howBackdrop').classList.add('open');
+  document.getElementById('howPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeHowto(){
+  document.getElementById('howBackdrop').classList.remove('open');
+  document.getElementById('howPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function createGrids(){
+  const gridA = document.getElementById('matrixA');
+  const gridB = document.getElementById('vectorB');
+  const gridX0 = document.getElementById('vectorX0');
+  
+  gridA.style.setProperty('--cols', N);
+  gridA.innerHTML = '';
+  gridB.innerHTML = '';
+  gridX0.innerHTML = '';
+  
+  inputsA = [];
+  inputsB = [];
+  inputsX0 = [];
+  
+  for (let r=0; r<N; r++){
+    const rowA = [];
+    for (let c=0; c<N; c++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.value = (r === c ? '10' : '1');
+      inp.step = '0.1';
+      inp.setAttribute('aria-label', `A[${r+1},${c+1}]`);
+      if (r === c) inp.classList.add('diagonal');
+      inp.addEventListener('blur', () => {
+        if (inp.value === '') inp.value = '0';
       });
-      
-      renderer.domElement.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-          const deltaX = e.clientX - previousMousePosition.x;
-          const deltaY = e.clientY - previousMousePosition.y;
-          
-          const rotationSpeed = 0.005;
-          
-          // Rotate camera around the origin
-          const radius = camera.position.length();
-          const theta = Math.atan2(camera.position.x, camera.position.z);
-          const phi = Math.acos(camera.position.y / radius);
-          
-          const newTheta = theta - deltaX * rotationSpeed;
-          const newPhi = Math.max(0.1, Math.min(Math.PI - 0.1, phi + deltaY * rotationSpeed));
-          
-          camera.position.x = radius * Math.sin(newPhi) * Math.sin(newTheta);
-          camera.position.y = radius * Math.cos(newPhi);
-          camera.position.z = radius * Math.sin(newPhi) * Math.cos(newTheta);
-          
-          camera.lookAt(0, 0, 0);
-          
-          previousMousePosition = { x: e.clientX, y: e.clientY };
-        }
-      });
-      
-      renderer.domElement.addEventListener('mouseup', () => {
-        isDragging = false;
-      });
-      
-      renderer.domElement.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const zoomSpeed = 0.1;
-        const delta = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
-        camera.position.multiplyScalar(delta);
-      });
-      
-      // Handle window resize
-      window.addEventListener('resize', onWindowResize);
-      
-      animate();
+      cell.appendChild(inp);
+      gridA.appendChild(cell);
+      rowA.push(inp);
     }
+    inputsA.push(rowA);
     
-    function addAxisLabels() {
-      const loader = new THREE.FontLoader();
-      const createTextLabel = (text, position, color) => {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 128;
-        
-        context.fillStyle = color;
-        context.font = 'Bold 48px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText(text, 128, 64);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(spriteMaterial);
-        sprite.position.copy(position);
-        sprite.scale.set(1, 0.5, 1);
-        scene.add(sprite);
-      };
-      
-      createTextLabel('x₁', new THREE.Vector3(6, 0, 0), '#ef4444');
-      createTextLabel('x₂', new THREE.Vector3(0, 6, 0), '#10b981');
-      createTextLabel('x₃', new THREE.Vector3(0, 0, 6), '#3b82f6');
+    const cellB = document.createElement('div');
+    cellB.className = 'cell';
+    const inpB = document.createElement('input');
+    inpB.type = 'number';
+    inpB.value = '1';
+    inpB.step = '0.1';
+    inpB.setAttribute('aria-label', `b[${r+1}]`);
+    inpB.addEventListener('blur', () => {
+      if (inpB.value === '') inpB.value = '0';
+    });
+    cellB.appendChild(inpB);
+    gridB.appendChild(cellB);
+    inputsB.push(inpB);
+    
+    const cellX0 = document.createElement('div');
+    cellX0.className = 'cell';
+    const inpX0 = document.createElement('input');
+    inpX0.type = 'number';
+    inpX0.value = '0';
+    inpX0.step = '0.1';
+    inpX0.setAttribute('aria-label', `x0[${r+1}]`);
+    inpX0.addEventListener('blur', () => {
+      if (inpX0.value === '') inpX0.value = '0';
+    });
+    cellX0.appendChild(inpX0);
+    gridX0.appendChild(cellX0);
+    inputsX0.push(inpX0);
+  }
+  
+  resetIterations();
+}
+
+function getSystem(){
+  const A = [], b = [], x0 = [];
+  for (let r=0; r<N; r++){
+    const row = [];
+    for (let c=0; c<N; c++){
+      row.push(parseFloat(inputsA[r][c].value || 0));
     }
-    
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    
-    function animate() {
-      animationId = requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
-    
-    function getSystem() {
-      const A = [
-        [parseFloat(document.getElementById('a11').value), 
-         parseFloat(document.getElementById('a12').value), 
-         parseFloat(document.getElementById('a13').value)],
-        [parseFloat(document.getElementById('a21').value), 
-         parseFloat(document.getElementById('a22').value), 
-         parseFloat(document.getElementById('a23').value)],
-        [parseFloat(document.getElementById('a31').value), 
-         parseFloat(document.getElementById('a32').value), 
-         parseFloat(document.getElementById('a33').value)]
-      ];
-      
-      const b = [
-        parseFloat(document.getElementById('b1').value),
-        parseFloat(document.getElementById('b2').value),
-        parseFloat(document.getElementById('b3').value)
-      ];
-      
-      return { A, b };
-    }
-    
-    function gaussSeidelIteration(x, A, b) {
-      const newX = [...x];
-      for (let i = 0; i < 3; i++) {
-        let sum = b[i];
-        for (let j = 0; j < 3; j++) {
-          if (j !== i) {
-            sum -= A[i][j] * newX[j];
-          }
-        }
-        newX[i] = sum / A[i][i];
-      }
-      return newX;
-    }
-    
-    function calculateError(x1, x2) {
-      let maxError = 0;
-      for (let i = 0; i < 3; i++) {
-        const err = Math.abs(x1[i] - x2[i]);
-        if (err > maxError) maxError = err;
-      }
-      return maxError;
-    }
-    
-    function addSphere(position, color, size = 0.1) {
-      const geometry = new THREE.SphereGeometry(size, 16, 16);
-      const material = new THREE.MeshStandardMaterial({ 
-        color: color,
-        emissive: color,
-        emissiveIntensity: 0.3,
-        metalness: 0.5,
-        roughness: 0.3
-      });
-      const sphere = new THREE.Mesh(geometry, material);
-      sphere.position.set(position[0], position[1], position[2]);
-      scene.add(sphere);
-      return sphere;
-    }
-    
-    function updatePathLine() {
-      if (pathLine) {
-        scene.remove(pathLine);
-      }
-      
-      if (iterationPoints.length < 2) return;
-      
-      const points = iterationPoints.map(p => new THREE.Vector3(p[0], p[1], p[2]));
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const material = new THREE.LineBasicMaterial({ 
-        color: 0x3b82f6,
-        linewidth: 2
-      });
-      pathLine = new THREE.Line(geometry, material);
-      scene.add(pathLine);
-    }
-    
-    async function startIteration() {
-      // Clear previous iteration
-      iterationPoints.forEach(point => {
-        const sphere = scene.children.find(child => 
-          child.position.x === point[0] && 
-          child.position.y === point[1] && 
-          child.position.z === point[2]
-        );
-        if (sphere) scene.remove(sphere);
-      });
-      
-      if (pathLine) scene.remove(pathLine);
-      if (currentSphere) scene.remove(currentSphere);
-      if (trueSolutionSphere) scene.remove(trueSolutionSphere);
-      
-      iterationPoints = [];
-      
-      const { A, b } = getSystem();
-      let x = [0, 0, 0];
-      iterationPoints.push([...x]);
-      
-      // Calculate and show true solution
-      const trueSolution = solveDirect(A, b);
-      trueSolutionSphere = addSphere(trueSolution, 0x10b981, 0.15);
-      
-      const tolerance = 0.0001;
-      const maxIterations = 50;
-      let iteration = 0;
-      
-      while (iteration < maxIterations) {
-        const oldX = [...x];
-        x = gaussSeidelIteration(x, A, b);
-        const error = calculateError(x, oldX);
-        
-        iterationPoints.push([...x]);
-        addSphere(x, 0x3b82f6, 0.08);
-        updatePathLine();
-        
-        // Update current position
-        if (currentSphere) scene.remove(currentSphere);
-        currentSphere = addSphere(x, 0xf59e0b, 0.12);
-        
-        // Update UI
-        document.getElementById('iter').textContent = iteration + 1;
-        document.getElementById('error').textContent = error.toFixed(6);
-        document.getElementById('solution').textContent = 
-          `[${x.map(v => v.toFixed(3)).join(', ')}]`;
-        
-        iteration++;
-        
-        if (error < tolerance) {
-          document.getElementById('status').style.borderLeftColor = '#10b981';
-          break;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
+    A.push(row);
+    b.push(parseFloat(inputsB[r].value || 0));
+    x0.push(parseFloat(inputsX0[r].value || 0));
+  }
+  return {A, b, x0};
+}
+
+function gaussSeidelIteration(){
+  const {A, b} = getSystem();
+  const x = [...currentX];
+  
+  for (let i=0; i<N; i++){
+    let sum = b[i];
+    for (let j=0; j<N; j++){
+      if (j !== i){
+        sum -= A[i][j] * x[j];
       }
     }
-    
-    function solveDirect(A, b) {
-      // Simple Gaussian elimination for 3x3
-      const n = 3;
-      const aug = A.map((row, i) => [...row, b[i]]);
-      
-      for (let i = 0; i < n; i++) {
-        let maxRow = i;
-        for (let k = i + 1; k < n; k++) {
-          if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) {
-            maxRow = k;
-          }
-        }
-        [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
-        
-        for (let k = i + 1; k < n; k++) {
-          const factor = aug[k][i] / aug[i][i];
-          for (let j = i; j <= n; j++) {
-            aug[k][j] -= factor * aug[i][j];
-          }
-        }
-      }
-      
-      const x = new Array(n);
-      for (let i = n - 1; i >= 0; i--) {
-        x[i] = aug[i][n];
-        for (let j = i + 1; j < n; j++) {
-          x[i] -= aug[i][j] * x[j];
-        }
-        x[i] /= aug[i][i];
-      }
-      
-      return x;
+    x[i] = sum / A[i][i];
+  }
+  
+  return x;
+}
+
+function calculateError(x1, x2){
+  let maxError = 0;
+  for (let i=0; i<N; i++){
+    const err = Math.abs(x1[i] - x2[i]);
+    if (err > maxError) maxError = err;
+  }
+  return maxError;
+}
+
+function checkDiagonalDominance(){
+  const {A} = getSystem();
+  for (let i=0; i<N; i++){
+    let diag = Math.abs(A[i][i]);
+    let sum = 0;
+    for (let j=0; j<N; j++){
+      if (j !== i) sum += Math.abs(A[i][j]);
+    }
+    if (diag <= sum) return false;
+  }
+  return true;
+}
+
+function iterate(){
+  if (iterationData.length === 0){
+    const {x0} = getSystem();
+    currentX = [...x0];
+    iterationData.push({
+      iteration: 0,
+      x: [...currentX],
+      error: 0
+    });
+    updateDisplay();
+    setNarr('Iteration 0: Initial guess set. Click Next Iteration to continue.');
+    log('<strong>Starting Gauss-Seidel iterations...</strong>');
+    log(`Initial guess: x = [${currentX.map(v => v.toFixed(4)).join(', ')}]`);
+    return;
+  }
+  
+  const maxIter = parseInt(document.getElementById('maxIter').value || 50);
+  const tolerance = parseFloat(document.getElementById('tolerance').value || 0.0001);
+  
+  if (iterationData.length > maxIter){
+    setNarr('⚠️ Maximum iterations reached without convergence.');
+    log('<strong>⚠️ Max iterations reached.</strong>');
+    stopRunning();
+    return;
+  }
+  
+  const oldX = [...currentX];
+  currentX = gaussSeidelIteration();
+  const error = calculateError(currentX, oldX);
+  
+  iterationData.push({
+    iteration: iterationData.length,
+    x: [...currentX],
+    error: error
+  });
+  
+  updateDisplay();
+  drawChart();
+  
+  log(`<span class="log-step">Iteration ${iterationData.length - 1}:</span> x = [${currentX.map(v => v.toFixed(4)).join(', ')}], error = ${error.toFixed(6)}`);
+  
+  if (error < tolerance){
+    setNarr(`✅ <strong>Converged!</strong> Solution found in ${iterationData.length - 1} iterations. Error = ${error.toFixed(6)}`);
+    log(`<strong>✅ CONVERGENCE ACHIEVED</strong> in ${iterationData.length - 1} iterations.`);
+    document.getElementById('status').textContent = 'Converged';
+    document.getElementById('status').className = 'value converged';
+    stopRunning();
+  } else {
+    setNarr(`Iteration ${iterationData.length - 1}: Error = ${error.toFixed(6)}. ${error < tolerance * 10 ? 'Getting close!' : 'Continuing...'}`);
+  }
+}
+
+function runToConvergence(){
+  if (isRunning) return;
+  isRunning = true;
+  document.getElementById('iterate').style.display = 'none';
+  document.getElementById('run').style.display = 'none';
+  document.getElementById('stop').style.display = 'inline-flex';
+  
+  const runInterval = setInterval(() => {
+    if (!isRunning){
+      clearInterval(runInterval);
+      return;
     }
     
-    function resetView() {
-      camera.position.set(8, 8, 8);
-      camera.lookAt(0, 0, 0);
-      
-      if (pathLine) scene.remove(pathLine);
-      if (currentSphere) scene.remove(currentSphere);
-      if (trueSolutionSphere) scene.remove(trueSolutionSphere);
-      
-      iterationPoints.forEach(point => {
-        const sphere = scene.children.find(child => 
-          child.position.x === point[0] && 
-          child.position.y === point[1] && 
-          child.position.z === point[2]
-        );
-        if (sphere) scene.remove(sphere);
-      });
-      
-      iterationPoints = [];
-      document.getElementById('iter').textContent = '0';
-      document.getElementById('error').textContent = '–';
-      document.getElementById('solution').textContent = '[0, 0, 0]';
-      document.getElementById('status').style.borderLeftColor = '#3b82f6';
-    }
+    iterate();
     
-    function loadPreset() {
-      document.getElementById('a11').value = '10';
-      document.getElementById('a12').value = '1';
-      document.getElementById('a13').value = '1';
-      document.getElementById('a21').value = '1';
-      document.getElementById('a22').value = '10';
-      document.getElementById('a23').value = '1';
-      document.getElementById('a31').value = '1';
-      document.getElementById('a32').value = '1';
-      document.getElementById('a33').value = '10';
-      document.getElementById('b1').value = '12';
-      document.getElementById('b2').value = '12';
-      document.getElementById('b3').value = '12';
-      
-      resetView();
-    }
+    const lastIter = iterationData[iterationData.length - 1];
+    const tolerance = parseFloat(document.getElementById('tolerance').value || 0.0001);
+    const maxIter = parseInt(document.getElementById('maxIter').value || 50);
     
-    // Initialize on load
-    window.addEventListener('DOMContentLoaded', init);
-  </script>
+    if (lastIter && (lastIter.error < tolerance || iterationData.length > maxIter)){
+      stopRunning();
+      clearInterval(runInterval);
+    }
+  }, 500);
+}
+
+function stopRunning(){
+  isRunning = false;
+  document.getElementById('iterate').style.display = 'inline-flex';
+  document.getElementById('run').style.display = 'inline-flex';
+  document.getElementById('stop').style.display = 'none';
+}
+
+function resetIterations(){
+  iterationData = [];
+  currentX = [];
+  stopRunning();
+  updateDisplay();
+  clearChart();
+  setNarr('System ready. Click Next Iteration to start solving.');
+  clearLog();
+  document.getElementById('status').textContent = 'Ready';
+  document.getElementById('status').className = 'value';
+}
+
+function updateDisplay(){
+  const solDiv = document.getElementById('currentSolution');
+  const iterCountEl = document.getElementById('iterCount');
+  const errorValEl = document.getElementById('errorVal');
+  
+  if (iterationData.length === 0){
+    solDiv.innerHTML = '<div class="muted">Start iterations to see solution...</div>';
+    iterCountEl.textContent = '0';
+    errorValEl.textContent = '–';
+    return;
+  }
+  
+  const lastIter = iterationData[iterationData.length - 1];
+  let html = `<div><strong>Iteration ${lastIter.iteration}:</strong></div><div style="margin-top:8px; line-height:2">`;
+  
+  for (let i=0; i<N; i++){
+    html += `<span class="var">x<sub>${i+1}</sub></span> = <span class="value">${lastIter.x[i].toFixed(6)}</span><br>`;
+  }
+  
+  html += `</div><div style="margin-top:8px"><span class="error">Error: ${lastIter.error.toFixed(6)}</span></div>`;
+  solDiv.innerHTML = html;
+  
+  iterCountEl.textContent = lastIter.iteration;
+  errorValEl.textContent = lastIter.error.toFixed(6);
+}
+
+function drawChart(){
+  const canvas = document.getElementById('chartCanvas');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  
+  const w = rect.width;
+  const h = rect.height;
+  
+  ctx.fillStyle = '#0d1a35';
+  ctx.fillRect(0, 0, w, h);
+  
+  if (iterationData.length < 2) return;
+  
+  const errors = iterationData.map(d => d.error);
+  const maxError = Math.max(...errors);
+  const minError = Math.min(...errors.filter(e => e > 0));
+  
+  const padding = 40;
+  const chartW = w - 2 * padding;
+  const chartH = h - 2 * padding;
+  
+  ctx.strokeStyle = '#1a3a5f';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, h - padding);
+  ctx.lineTo(w - padding, h - padding);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  
+  for (let i=0; i<errors.length; i++){
+    const x = padding + (i / (errors.length - 1)) * chartW;
+    const logError = Math.log10(errors[i] + 1e-10);
+    const logMax = Math.log10(maxError + 1e-10);
+    const logMin = Math.log10(minError + 1e-10);
+    const y = h - padding - ((logError - logMin) / (logMax - logMin)) * chartH;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  ctx.fillStyle = '#60a5fa';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Iteration', w/2, h - 10);
+  
+  ctx.save();
+  ctx.translate(15, h/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Error (log)', 0, 0);
+  ctx.restore();
+}
+
+function clearChart(){
+  const canvas = document.getElementById('chartCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function setNarr(html){
+  narrEl.innerHTML = html;
+}
+
+function log(html){
+  logEl.insertAdjacentHTML('beforeend', `<div>• ${html}</div>`);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog(){
+  logEl.innerHTML = '<div class="muted">Iterations will appear here...</div>';
+}
+
+function presetA(){
+  N = 3;
+  document.getElementById('size').value = N;
+  createGrids();
+  
+  const A = [[10, 1, 1], [1, 10, 1], [1, 1, 10]];
+  const b = [12, 12, 12];
+  
+  for (let r=0; r<N; r++){
+    for (let c=0; c<N; c++){
+      inputsA[r][c].value = A[r][c];
+    }
+    inputsB[r].value = b[r];
+  }
+  
+  setNarr('<strong>Preset A loaded:</strong> Diagonally dominant system. Guaranteed convergence! True solution: x = [1, 1, 1]');
+  log('<strong>Preset A:</strong> Diagonally dominant 3×3 system');
+}
+
+function presetB(){
+  N = 3;
+  document.getElementById('size').value = N;
+  createGrids();
+  
+  const A = [[4, 1, 0], [1, 4, 1], [0, 1, 4]];
+  const b = [5, 6, 5];
+  
+  for (let r=0; r<N; r++){
+    for (let c=0; c<N; c++){
+      inputsA[r][c].value = A[r][c];
+    }
+    inputsB[r].value = b[r];
+  }
+  
+  setNarr('<strong>Preset B loaded:</strong> Tridiagonal system. Watch fast convergence!');
+  log('<strong>Preset B:</strong> Tridiagonal 3×3 system');
+}
+
+function randomM(){
+  for (let r=0; r<N; r++){
+    for (let c=0; c<N; c++){
+      inputsA[r][c].value = (r === c ? Math.floor(Math.random() * 5 + 5) : Math.floor(Math.random() * 3 - 1)).toString();
+    }
+    inputsB[r].value = Math.floor(Math.random() * 10 + 1).toString();
+  }
+  setNarr('Random system generated. Check diagonal dominance before iterating!');
+}
+
+function clearM(){
+  for (let r=0; r<N; r++){
+    for (let c=0; c<N; c++){
+      inputsA[r][c].value = (r === c ? '10' : '1');
+    }
+    inputsB[r].value = '1';
+    inputsX0[r].value = '0';
+  }
+  resetIterations();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  logEl = document.getElementById('log');
+  narrEl = document.getElementById('narr');
+  
+  document.getElementById('howBtn').addEventListener('click', () => {
+    const panel = document.getElementById('howPanel');
+    if (panel.classList.contains('open')) closeHowto();
+    else openHowto();
+  });
+  document.getElementById('howClose').addEventListener('click', closeHowto);
+  document.getElementById('howBackdrop').addEventListener('click', closeHowto);
+  
+  document.getElementById('resize').addEventListener('click', () => {
+    const n = Math.max(2, Math.min(5, parseInt(document.getElementById('size').value || 3)));
+    N = n;
+    createGrids();
+  });
+  
+  document.getElementById('presetA').addEventListener('click', presetA);
+  document.getElementById('presetB').addEventListener('click', presetB);
+  document.getElementById('random').addEventListener('click', randomM);
+  document.getElementById('reset').addEventListener('click', clearM);
+  
+  document.getElementById('iterate').addEventListener('click', iterate);
+  document.getElementById('run').addEventListener('click', runToConvergence);
+  document.getElementById('stop').addEventListener('click', stopRunning);
+  document.getElementById('clear').addEventListener('click', resetIterations);
+  
+  createGrids();
+});
+</script>
 </body>
 </html>
